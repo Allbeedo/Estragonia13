@@ -1,8 +1,10 @@
 name: Apple test
 
-# Runs samples/HelloWorld on a GitHub macOS runner and uploads screenshots.
+# Runs samples/HelloWorld on GitHub macOS runners and uploads screenshots.
 # macos-latest is an Apple silicon VM with a paravirtualized Metal device and a logged-in GUI session,
 # so Godot gets a real window and the Metal backend runs on real Metal.
+# macos-15-intel is an Intel VM, likely without a usable GPU: it shows what old Intel Macs fall back to,
+# so the "metal run must use the Metal backend" check only applies to Apple silicon.
 
 on:
   workflow_dispatch:
@@ -24,8 +26,19 @@ permissions:
 
 jobs:
   macos:
-    runs-on: macos-latest
+    name: macos (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: apple-silicon
+            require_metal: true
+          - runner: macos-15-intel
+            arch: intel
+            require_metal: false
     env:
       GODOT_VERSION: 4.7.2-stable
       SAMPLE: samples/HelloWorld
@@ -59,6 +72,7 @@ jobs:
         run: |
           mkdir -p "$SHOT_DIR"
           status=0
+          echo "### ${{ matrix.arch }} ($(uname -m), macOS $(sw_vers -productVersion))" >> "$GITHUB_STEP_SUMMARY"
           echo "| Run | Godot driver | Estragonia path | Screenshots |" >> "$GITHUB_STEP_SUMMARY"
           echo "|-----|--------------|-----------------|-------------|" >> "$GITHUB_STEP_SUMMARY"
 
@@ -70,23 +84,30 @@ jobs:
             cat "$SHOT_DIR/$name.log"
             echo "::endgroup::"
 
-            local driver path shots
+            local driver adapter path shots
             driver=$(sed -n 's/^CI: driver=\([^ ]*\).*/\1/p' "$SHOT_DIR/$name.log")
+            adapter=$(sed -n 's/^CI: .* adapter=//p' "$SHOT_DIR/$name.log")
             if grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/$name.log"; then path=CPU; else path=GPU; fi
             grep -q "couldn't initialize GPU" "$SHOT_DIR/$name.log" && path="CPU (GPU init failed)"
             [ -z "$driver" ] && path="didn't start"
             shots=$(ls "$SHOT_DIR" | grep -c "^$name-.*\.png$" || true)
-            echo "| $name | ${driver:-?} | $path | $shots/3 |" >> "$GITHUB_STEP_SUMMARY"
-            echo "$name: driver=${driver:-?} path=$path screenshots=$shots/3"
+            echo "| $name | ${driver:-?} (${adapter:-?}) | $path | $shots/3 |" >> "$GITHUB_STEP_SUMMARY"
+            echo "$name: driver=${driver:-?} adapter=${adapter:-?} path=$path screenshots=$shots/3"
 
-            if [ "$shots" != 3 ]; then status=1; fi
+            if [ "$shots" != 3 ]; then
+              if [ "${{ matrix.require_metal }}" = true ] || [ "$name" != metal ]; then status=1; fi
+            fi
           }
 
           run metal --rendering-driver metal
           # Metal must use the GPU backend, not the CPU fallback.
           if ! grep -q "CI: driver=metal" "$SHOT_DIR/metal.log" || grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/metal.log"; then
-            echo "::error::The metal run didn't use Estragonia's Metal backend"
-            status=1
+            if [ "${{ matrix.require_metal }}" = true ]; then
+              echo "::error::The metal run didn't use Estragonia's Metal backend"
+              status=1
+            else
+              echo "::warning::The metal run didn't use Estragonia's Metal backend on this runner"
+            fi
           fi
 
           # These two should use the CPU fallback.
@@ -109,6 +130,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: macos-screenshots
+          name: macos-${{ matrix.arch }}-screenshots
           path: screenshots/
           if-no-files-found: warn
