@@ -20,6 +20,9 @@ internal sealed class GodotVkSkiaGpu : GodotSkiaGpu {
 	protected override GRContext GrContext
 		=> _grContext;
 
+	public override string Description
+		=> "Vulkan";
+
 	public unsafe GodotVkSkiaGpu(RenderingDevice renderingDevice)
 		: base(renderingDevice) {
 

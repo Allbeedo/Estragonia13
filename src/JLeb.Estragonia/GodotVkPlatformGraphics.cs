@@ -59,7 +59,10 @@ public sealed class GodotVkPlatformGraphics : IPlatformGraphicsWithFeatures, IPl
 
 	private static GodotSkiaGpu? TryCreateSkiaGpu() {
 		try {
-			return CreateSkiaGpu();
+			var gpu = CreateSkiaGpu();
+			if (gpu is not null)
+				GD.Print($"Estragonia is rendering on the GPU with {gpu.Description}");
+			return gpu;
 		}
 		catch (Exception ex) {
 			GD.PushError($"Estragonia couldn't initialize GPU rendering, falling back to CPU rendering: {ex}");
@@ -72,14 +75,19 @@ public sealed class GodotVkPlatformGraphics : IPlatformGraphicsWithFeatures, IPl
 		var driverName = RenderingServer.GetCurrentRenderingDriverName();
 		var renderingDevice = RenderingServer.GetRenderingDevice();
 
+		// SkiaSharp's Apple native libraries are built without Vulkan: on Apple platforms, Godot's Vulkan driver runs on MoltenVK,
+		// and Skia draws with Metal into the Metal textures behind Godot's Vulkan images instead.
+		if (renderingDevice is not null && driverName == "vulkan" && MetalInterop.IsApplePlatform
+			&& GodotMetalSkiaGpu.CreateForMoltenVK(renderingDevice) is { } moltenVKGpu)
+			return moltenVKGpu;
+
 		var fastPathHint = driverName switch {
 			_ when renderingDevice is null
 				=> "GPU rendering requires the Forward+ or Mobile renderer",
 			"metal"
 				=> null,
-			// SkiaSharp's Apple native libraries are built without Vulkan, so MoltenVK can't be used.
 			"vulkan" when MetalInterop.IsApplePlatform
-				=> "set rendering/rendering_device/driver.macos (and driver.ios) to metal, Godot's default, for GPU rendering",
+				=> "MoltenVK's Metal interop functions weren't found in the running program",
 			"vulkan"
 				=> null,
 			"d3d12"
@@ -94,7 +102,7 @@ public sealed class GodotVkPlatformGraphics : IPlatformGraphicsWithFeatures, IPl
 		}
 
 		return driverName == "metal"
-			? new GodotMetalSkiaGpu(renderingDevice!)
+			? GodotMetalSkiaGpu.CreateForMetalDriver(renderingDevice!)
 			: new GodotVkSkiaGpu(renderingDevice!);
 	}
 

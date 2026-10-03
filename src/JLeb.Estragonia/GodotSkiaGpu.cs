@@ -24,6 +24,9 @@ internal abstract class GodotSkiaGpu : ISkiaGpu {
 
 	protected abstract GRContext GrContext { get; }
 
+	/// <summary>Gets a short description of the backend, for logging.</summary>
+	public abstract string Description { get; }
+
 	public bool IsLost
 		=> GrContext.IsAbandoned;
 

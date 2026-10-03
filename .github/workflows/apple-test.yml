@@ -98,7 +98,9 @@ jobs:
             exitcode=$(sed -n 's/^exit code //p' "$SHOT_DIR/$name.log")
             driver=$(sed -n 's/^CI: driver=\([^ ]*\).*/\1/p' "$SHOT_DIR/$name.log")
             adapter=$(sed -n 's/^CI: .* adapter=//p' "$SHOT_DIR/$name.log")
-            if grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/$name.log"; then path=CPU; else path=GPU; fi
+            path=$(sed -n 's/.*Estragonia is rendering on the GPU with //p' "$SHOT_DIR/$name.log" | head -1)
+            grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/$name.log" && path=CPU
+            [ -z "$path" ] && path="?"
             grep -q "couldn't initialize GPU" "$SHOT_DIR/$name.log" && path="CPU (GPU init failed)"
             [ -z "$driver" ] && path="didn't start"
             shots=$(ls "$SHOT_DIR" | grep -c "^$name-.*\.png$" || true)
@@ -118,19 +120,27 @@ jobs:
           # metal driver and uses Vulkan (MoltenVK), which aborts in Godot itself on the GPU-less Intel VMs.
           run default $gpu
           run metal $gpu --rendering-driver metal
-          # Metal must use the GPU backend, not the CPU fallback.
-          if ! grep -q "CI: driver=metal" "$SHOT_DIR/metal.log" || grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/metal.log"; then
-            if [ "${{ matrix.require_metal }}" = true ]; then
-              echo "::error::The metal run didn't use Estragonia's Metal backend"
-              status=1
-            else
-              echo "::warning::The metal run didn't use Estragonia's Metal backend on this runner"
+          # Check Estragonia picked the expected GPU backend.
+          expect() {
+            local name=$1 backend=$2
+            if ! grep -q "Estragonia is rendering on the GPU with $backend\$" "$SHOT_DIR/$name.log"; then
+              if [ "${{ matrix.require_metal }}" = true ]; then
+                echo "::error::The $name run didn't render on the GPU with $backend"
+                status=1
+              else
+                echo "::warning::The $name run didn't render on the GPU with $backend on this runner"
+              fi
             fi
-          fi
+          }
 
           # These two should use the CPU fallback.
           run opengl required --rendering-method gl_compatibility --rendering-driver opengl3
           run moltenvk $gpu --rendering-driver vulkan
+
+          expect default Metal
+          expect metal Metal
+          # On Vulkan, Godot runs on MoltenVK: Estragonia draws with Metal into the Metal textures behind Godot's Vulkan images.
+          expect moltenvk "Metal via MoltenVK"
 
           exit $status
 

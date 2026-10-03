@@ -10,10 +10,11 @@ The rendering driver is selected from `RenderingServer.GetCurrentRenderingDriver
 |--------|-----------|-------|
 | `vulkan` | Windows, Linux | Skia draws into the texture's `VkImage`; image layouts are transitioned around each draw. On Windows, Godot defaults to `d3d12`: set `rendering/rendering_device/driver.windows` to `vulkan` for GPU rendering. |
 | `metal` | macOS, iOS | Skia shares Godot's `MTLDevice` / `MTLCommandQueue` and draws into the texture's `MTLTexture`. Ordering relies on Metal's automatic hazard tracking; with `GODOT_MTL_FORCE_BARRIERS=1` Estragonia waits on the CPU after each draw instead. |
+| `vulkan` | macOS (Intel Macs, where Godot has no Metal driver) | Godot's Vulkan runs on MoltenVK. Estragonia gets the Metal objects behind Godot's Vulkan device, queue and images from MoltenVK (`vkGetMTL*MVK`, exported by Godot's executable) and draws with the same Metal backend. |
 
 | any other | all | **CPU fallback:** Avalonia renders with Skia into a memory buffer, uploaded to an `ImageTexture` after each frame. Only the dirty parts of the UI are redrawn, but the upload copies the whole texture whenever something changes. |
 
-The CPU fallback is used for `d3d12`, the Compatibility renderer (`opengl3`), Vulkan through MoltenVK on Apple platforms (SkiaSharp's Apple native libraries are built without Vulkan), and whenever GPU initialization fails. Estragonia prints a warning saying so. It's fine for menus and HUDs; for large, constantly animating UIs, use a GPU driver. `GodotVkPlatformGraphics.IsSoftware` tells which path is in use.
+The CPU fallback is used for `d3d12`, the Compatibility renderer (`opengl3`), and whenever GPU initialization fails (for instance if MoltenVK's functions aren't found). Estragonia prints a warning saying so. It's fine for menus and HUDs; for large, constantly animating UIs, use a GPU driver. `GodotVkPlatformGraphics.IsSoftware` tells which path is in use.
 
 ## Input order (Godot)
 

@@ -6,9 +6,11 @@ using SkiaSharp;
 namespace JLeb.Estragonia;
 
 /// <summary>
-/// Bridges the Godot Metal renderer (macOS / iOS) with a Skia context used by Avalonia.
+/// Bridges Godot on Apple platforms with a Skia context used by Avalonia, using Metal.
 /// Skia gets Godot's own <c>id&lt;MTLDevice&gt;</c> and <c>id&lt;MTLCommandQueue&gt;</c>,
 /// and draws directly into the <c>id&lt;MTLTexture&gt;</c> backing each Godot texture (zero-copy).
+/// The Metal objects come either from Godot's Metal driver (<see cref="CreateForMetalDriver"/>),
+/// or from MoltenVK when Godot runs on Vulkan (<see cref="CreateForMoltenVK"/>, e.g. Intel Macs, where Godot has no Metal driver).
 /// </summary>
 /// <remarks>
 /// Adapted from SkiaGameRendering's <c>MetalSkiaSurfaceFactory</c> / <c>MetalGodotBackend</c>
@@ -17,24 +19,83 @@ namespace JLeb.Estragonia;
 internal sealed class GodotMetalSkiaGpu : GodotSkiaGpu {
 
 	private readonly GRContext _grContext;
+	private readonly Func<Rid, IntPtr> _getMTLTexture;
 	private readonly bool _untrackedResources;
 
 	protected override GRContext GrContext
 		=> _grContext;
 
-	public GodotMetalSkiaGpu(RenderingDevice renderingDevice)
+	public override string Description { get; }
+
+	/// <summary>Uses the Metal objects of Godot's Metal rendering driver.</summary>
+	public static GodotMetalSkiaGpu CreateForMetalDriver(RenderingDevice renderingDevice) {
+		var device = (IntPtr) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.LogicalDevice, default, 0UL);
+		var queue = (IntPtr) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.CommandQueue, default, 0UL);
+
+		return new GodotMetalSkiaGpu(
+			renderingDevice,
+			device,
+			queue,
+			texture => (IntPtr) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.Texture, texture, 0UL),
+			// Godot's Metal driver creates untracked resources with this flag.
+			OS.GetEnvironment("GODOT_MTL_FORCE_BARRIERS") == "1",
+			"Metal"
+		);
+	}
+
+	/// <summary>
+	/// Uses the Metal objects behind the Vulkan objects of Godot's Vulkan rendering driver, which runs on MoltenVK on Apple platforms.
+	/// Returns null if MoltenVK's functions aren't available.
+	/// </summary>
+	/// <remarks>
+	/// Skia commits its command buffers to the <c>MTLCommandQueue</c> behind Godot's <c>VkQueue</c>, so they're ordered with Godot's
+	/// submissions, and MoltenVK creates tracked textures, so Metal orders Skia's writes and Godot's reads.
+	/// Vulkan image layouts don't exist in Metal, so the texture's layout as tracked by Godot stays valid.
+	/// </remarks>
+	public static GodotMetalSkiaGpu? CreateForMoltenVK(RenderingDevice renderingDevice) {
+		if (!MoltenVKInterop.IsAvailable)
+			return null;
+
+		var vkPhysicalDevice = (IntPtr) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.PhysicalDevice, default, 0UL);
+		var vkQueue = (IntPtr) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.CommandQueue, default, 0UL);
+		if (vkPhysicalDevice == IntPtr.Zero || vkQueue == IntPtr.Zero)
+			throw new InvalidOperationException("Godot returned null Vulkan objects for driver resources PhysicalDevice / CommandQueue");
+
+		return new GodotMetalSkiaGpu(
+			renderingDevice,
+			MoltenVKInterop.GetMTLDevice(vkPhysicalDevice),
+			MoltenVKInterop.GetMTLCommandQueue(vkQueue),
+			texture => {
+				var vkImage = renderingDevice.GetDriverResource(RenderingDevice.DriverResource.Texture, texture, 0UL);
+				return vkImage == 0UL ? IntPtr.Zero : MoltenVKInterop.GetMTLTexture(vkImage);
+			},
+			false,
+			"Metal via MoltenVK"
+		);
+	}
+
+	private GodotMetalSkiaGpu(
+		RenderingDevice renderingDevice,
+		IntPtr device,
+		IntPtr queue,
+		Func<Rid, IntPtr> getMTLTexture,
+		bool untrackedResources,
+		string description
+	)
 		: base(renderingDevice) {
 
 		if (!MetalInterop.IsApplePlatform)
 			throw new PlatformNotSupportedException("Metal is only available on Apple platforms");
 
-		var device = (IntPtr) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.LogicalDevice, default, 0UL);
 		if (device == IntPtr.Zero || !MetalInterop.ConformsTo(device, "MTLDevice"))
-			throw new InvalidOperationException("Godot didn't return a valid MTLDevice for driver resource LogicalDevice");
+			throw new InvalidOperationException("Couldn't get a valid MTLDevice from Godot");
 
-		var queue = (IntPtr) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.CommandQueue, default, 0UL);
 		if (queue == IntPtr.Zero || !MetalInterop.ConformsTo(queue, "MTLCommandQueue"))
-			throw new InvalidOperationException("Godot didn't return a valid MTLCommandQueue for driver resource CommandQueue");
+			throw new InvalidOperationException("Couldn't get a valid MTLCommandQueue from Godot");
+
+		_getMTLTexture = getMTLTexture;
+		_untrackedResources = untrackedResources;
+		Description = description;
 
 		using var backendContext = new GRMtlBackendContext {
 			DeviceHandle = device,
@@ -43,16 +104,15 @@ internal sealed class GodotMetalSkiaGpu : GodotSkiaGpu {
 
 		_grContext = GRContext.CreateMetal(backendContext)
 			?? throw new InvalidOperationException("Couldn't create Metal context");
-
-		_untrackedResources = OS.GetEnvironment("GODOT_MTL_FORCE_BARRIERS") == "1";
 	}
 
 	protected override GodotSkiaSurface CreateSurfaceCore(PixelSize size, double renderScaling) {
 		var gdRdTexture = CreateSharedTexture(size);
 		SKSurface skSurface;
+		bool waitForGpu;
 
 		try {
-			var mtlTexture = (IntPtr) RenderingDevice.GetDriverResource(RenderingDevice.DriverResource.Texture, gdRdTexture, 0UL);
+			var mtlTexture = _getMTLTexture(gdRdTexture);
 			if (mtlTexture == IntPtr.Zero || !MetalInterop.ConformsTo(mtlTexture, "MTLTexture"))
 				throw new InvalidOperationException("Couldn't get Metal texture from Godot texture");
 
@@ -60,6 +120,9 @@ internal sealed class GodotMetalSkiaGpu : GodotSkiaGpu {
 			var usage = MetalInterop.GetTextureUsage(mtlTexture);
 			if ((usage & MetalInterop.MTLTextureUsageRenderTarget) == 0)
 				throw new InvalidOperationException($"Metal texture usage 0x{usage:X} lacks MTLTextureUsageRenderTarget");
+
+			// Without hazard tracking, nothing orders Skia's writes and Godot's reads: wait for the GPU after each draw instead.
+			waitForGpu = _untrackedResources || MetalInterop.IsUntracked(mtlTexture);
 
 			// The pixel format is read from the MTLTexture itself: R8G8B8A8Unorm (MTLPixelFormatRGBA8Unorm) matches Rgba8888.
 			using var renderTarget = new GRBackendRenderTarget(size.Width, size.Height, new GRMtlTextureInfo(mtlTexture));
@@ -81,7 +144,7 @@ internal sealed class GodotMetalSkiaGpu : GodotSkiaGpu {
 			TextureRdRid = gdRdTexture
 		};
 
-		return new GodotSkiaSurface(skSurface, gdTexture, RenderingDevice, renderScaling, new MetalSurfaceSync(_grContext, _untrackedResources));
+		return new GodotSkiaSurface(skSurface, gdTexture, RenderingDevice, renderScaling, new MetalSurfaceSync(_grContext, waitForGpu));
 	}
 
 	public override void Dispose()

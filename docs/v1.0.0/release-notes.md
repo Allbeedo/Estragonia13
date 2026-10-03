@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- **Apple platforms:** new Metal rendering backend for macOS / iOS (Godot's default `metal` driver), adapted from [SkiaGameRendering](https://github.com/vchelaru/SkiaGameRendering) ([#92](https://github.com/vchelaru/SkiaGameRendering/issues/92), MIT). Vulkan through MoltenVK uses the CPU fallback.
-- **CPU fallback:** with any other rendering driver (`d3d12`, the Compatibility renderer, Vulkan through MoltenVK) or if GPU initialization fails, Avalonia renders on the CPU into an `ImageTexture` instead of failing, with a warning. See `GodotVkPlatformGraphics.IsSoftware`.
+- **Apple platforms:** new Metal rendering backend for macOS / iOS (Godot's default `metal` driver), adapted from [SkiaGameRendering](https://github.com/vchelaru/SkiaGameRendering) ([#92](https://github.com/vchelaru/SkiaGameRendering/issues/92), MIT). On macOS with the `vulkan` driver (e.g. Intel Macs, where Godot has no Metal driver), Estragonia draws with Metal into the Metal textures behind Godot's MoltenVK images, so UI still renders on the GPU.
+- **CPU fallback:** with any other rendering driver (`d3d12`, the Compatibility renderer) or if GPU initialization fails, Avalonia renders on the CPU into an `ImageTexture` instead of failing, with a warning. See `GodotVkPlatformGraphics.IsSoftware`.
 - `GodotTopLevelImpl.GetGdTexture()` now returns `Texture2D` (a `Texture2Drd` on the GPU, an `ImageTexture` with the CPU fallback).
 - Template and sample pin the rendering driver per platform (Vulkan on Windows / Linux, Metal on macOS / iOS), since Godot 4.6+ defaults to D3D12 on Windows.
 

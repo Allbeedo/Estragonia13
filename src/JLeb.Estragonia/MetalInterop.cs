@@ -48,4 +48,13 @@ internal static partial class MetalInterop {
 	public static ulong GetTextureUsage(IntPtr texture)
 		=> SendNUInt(texture, GetSelector("usage"));
 
+	/// <summary>
+	/// Returns whether Metal's automatic hazard tracking is disabled for an <c>id&lt;MTLResource&gt;</c>
+	/// (<c>MTLHazardTrackingModeUntracked</c>), in which case nothing orders Skia's writes and Godot's reads.
+	/// </summary>
+	public static bool IsUntracked(IntPtr resource)
+		=> SendNUInt(resource, GetSelector("hazardTrackingMode")) == MTLHazardTrackingModeUntracked;
+
+	private const nuint MTLHazardTrackingModeUntracked = 1;
+
 }
