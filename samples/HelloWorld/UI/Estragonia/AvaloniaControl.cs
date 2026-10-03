@@ -56,6 +56,18 @@ public partial class AvaloniaControl : Control {
 		}
 	}
 
+	/// <summary>
+	/// When true (default), all pointer events over Avalonia content are accepted. When false, only events Avalonia
+	/// handled are accepted and the rest fall through to Godot (<c>_UnhandledInput</c>).
+	/// </summary>
+	public bool AcceptUnhandledPointerEvents {
+		get => _engine?.AcceptUnhandledPointerEvents ?? true;
+		set {
+			EnsureEngine();
+			_engine!.AcceptUnhandledPointerEvents = value;
+		}
+	}
+
 	/// <summary>Gets the underlying Avalonia top-level element.</summary>
 	public GodotTopLevel GetTopLevel()
 		=> EngineOrThrow.GetTopLevel();

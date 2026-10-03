@@ -73,6 +73,15 @@ public sealed class AvaloniaControlEngine : IDisposable {
 	/// </summary>
 	public bool CaptureEmptyHits { get; set; }
 
+	/// <summary>
+	/// When true (default), every pointer event (mouse button, mouse motion, touch, drag) that reaches this control is
+	/// accepted, even when Avalonia did not handle it, so nothing behind the control sees it.
+	/// When false, only events Avalonia marked as handled are accepted; unhandled pointer input falls through to Godot
+	/// (other controls, then <c>_UnhandledInput</c>) — for hosts that keep Godot content visible under parts of the UI
+	/// and mark everything else as handled themselves.
+	/// </summary>
+	public bool AcceptUnhandledPointerEvents { get; set; } = true;
+
 	/// <summary>Gets the underlying Avalonia top-level element.</summary>
 	public GodotTopLevel GetTopLevel()
 		=> _topLevel ?? throw new InvalidOperationException($"The {nameof(AvaloniaControlEngine)} isn't initialized");
@@ -144,14 +153,15 @@ public sealed class AvaloniaControlEngine : IDisposable {
 
 		var handled = TryHandleInput(_topLevel.Impl, @event) || TryHandleAction(@event);
 
-		// Always consume pointer events while the cursor is over this control.
+		// By default, consume pointer events while the cursor is over this control (see AcceptUnhandledPointerEvents).
 		// Avalonia often leaves RawPointerEventArgs.Handled == false; without AcceptEvent,
 		// Godot can let the 3D viewport steal the mouse after Button press.
-		if (handled
-			|| @event is InputEventMouseButton
-			|| @event is InputEventMouseMotion
-			|| @event is InputEventScreenTouch
-			|| @event is InputEventScreenDrag) {
+		var isPointer = @event is InputEventMouseButton
+			or InputEventMouseMotion
+			or InputEventScreenTouch
+			or InputEventScreenDrag;
+
+		if (handled || (AcceptUnhandledPointerEvents && isPointer)) {
 			_owner.AcceptEvent();
 		}
 	}
