@@ -114,8 +114,9 @@ jobs:
           # Apple silicon only: Godot has no Metal driver on Intel, and the Intel VMs have no GPU for Vulkan.
           if [ "${{ matrix.require_metal }}" = true ]; then gpu=required; else gpu=optional; fi
 
-          # The project's own settings (driver.macos=metal), as a user would run it.
-          run default required
+          # The project's own settings (driver.macos=metal), as a user would run it. On Intel, Godot has no
+          # metal driver and uses Vulkan (MoltenVK), which aborts in Godot itself on the GPU-less Intel VMs.
+          run default $gpu
           run metal $gpu --rendering-driver metal
           # Metal must use the GPU backend, not the CPU fallback.
           if ! grep -q "CI: driver=metal" "$SHOT_DIR/metal.log" || grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/metal.log"; then
