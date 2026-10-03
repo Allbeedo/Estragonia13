@@ -4,6 +4,7 @@
 
 - **Apple platforms:** new Metal rendering backend for macOS / iOS (Godot's default `metal` driver), adapted from [SkiaGameRendering](https://github.com/vchelaru/SkiaGameRendering) ([#92](https://github.com/vchelaru/SkiaGameRendering/issues/92), MIT). Vulkan through MoltenVK is rejected with a clear error.
 - Clear error messages for unsupported rendering drivers (`d3d12`, Compatibility).
+- Template and sample pin the rendering driver per platform (Vulkan on Windows / Linux, Metal on macOS / iOS), since Godot 4.6+ defaults to D3D12 on Windows.
 
 ## 1.0.6
 

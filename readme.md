@@ -32,7 +32,7 @@
 |----|------|
 | .NET SDK | 10.x |
 | Godot | 4.7.2+（.NET / Forward+ 或 Mobile） |
-| 渲染驱动 | Windows / Linux：Vulkan；macOS / iOS：Metal（Godot 默认，MoltenVK 不支持） |
+| 渲染驱动 | Windows / Linux：Vulkan；macOS / iOS：Metal（不支持 D3D12、Compatibility、MoltenVK） |
 | Avalonia | 12.x |
 
 ---
@@ -99,6 +99,16 @@ dotnet add package CommunityToolkit.Mvvm
 ```
 
 1. 增加 Avalonia `Application`（含主题）。
+   在 `project.godot` 设置渲染驱动（Windows 默认是 D3D12，必须改成 Vulkan）：
+
+   ```ini
+   [rendering]
+   rendering_device/driver.windows="vulkan"
+   rendering_device/driver.linuxbsd="vulkan"
+   rendering_device/driver.macos="metal"
+   rendering_device/driver.ios="metal"
+   ```
+
 2. Autoload 里调用一次：
 
 ```csharp

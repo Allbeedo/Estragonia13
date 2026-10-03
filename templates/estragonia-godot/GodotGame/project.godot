@@ -26,3 +26,7 @@ project/assembly_name="GodotGame"
 [rendering]
 
 anti_aliasing/quality/screen_space_aa=1
+rendering_device/driver.windows="vulkan"
+rendering_device/driver.linuxbsd="vulkan"
+rendering_device/driver.macos="metal"
+rendering_device/driver.ios="metal"

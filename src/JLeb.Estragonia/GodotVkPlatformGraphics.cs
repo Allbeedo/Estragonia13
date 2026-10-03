@@ -48,6 +48,10 @@ public sealed class GodotVkPlatformGraphics : IPlatformGraphics, IDisposable {
 				+ "set rendering/rendering_device/driver.macos (and driver.ios) to metal, which is Godot's default"
 			),
 			"vulkan" => new GodotVkSkiaGpu(renderingDevice),
+			"d3d12" => throw new NotSupportedException(
+				"Estragonia doesn't support the d3d12 rendering driver (Godot's default on Windows since 4.6): "
+				+ "set rendering/rendering_device/driver.windows to vulkan"
+			),
 			_ => throw new NotSupportedException(
 				$"Estragonia doesn't support Godot's '{driverName}' rendering driver. Supported drivers: vulkan, metal"
 			)
