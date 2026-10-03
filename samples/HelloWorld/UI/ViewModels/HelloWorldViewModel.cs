@@ -43,7 +43,8 @@ public sealed partial class HelloWorldViewModel : ObservableObject {
 	[ObservableProperty] private double _musicVolume = 65;
 	[ObservableProperty] private string _graphicsQuality = "高";
 	[ObservableProperty] private bool _vsync = true;
-	[ObservableProperty] private DateTimeOffset? _saveSlotDate = DateTimeOffset.Now;
+	// CalendarDatePicker.SelectedDate is a DateTime?, binding a DateTimeOffset? fails with InvalidCastException.
+	[ObservableProperty] private DateTime? _saveSlotDate = DateTime.Now;
 	[ObservableProperty] private InventoryItem? _selectedItem;
 	[ObservableProperty] private string _chatDraft = "";
 	[ObservableProperty] private string _statusMessage = "准备就绪";
@@ -123,7 +124,7 @@ public sealed partial class HelloWorldViewModel : ObservableObject {
 	private async Task AutoSaveAsync() {
 		StatusMessage = "存档中…";
 		await Task.Delay(600);
-		SaveSlotDate = DateTimeOffset.Now;
+		SaveSlotDate = DateTime.Now;
 		StatusMessage = "自动存档完成";
 		PushLog($"存档 @ {SaveSlotDate:HH:mm:ss}");
 	}
