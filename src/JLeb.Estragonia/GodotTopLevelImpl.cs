@@ -24,7 +24,7 @@ public sealed class GodotTopLevelImpl : ITopLevelImpl {
 	private readonly IClipboard _clipboard;
 	private readonly TouchDevice _touchDevice = new();
 
-	private GodotSkiaSurface? _surface;
+	private IGodotRenderSurface? _surface;
 	private WindowTransparencyLevel _transparencyLevel = WindowTransparencyLevel.Transparent;
 	private PixelSize _renderSize;
 	private IInputRoot? _inputRoot;
@@ -85,21 +85,26 @@ public sealed class GodotTopLevelImpl : ITopLevelImpl {
 		platformGraphics.AddRef();
 	}
 
-	private GodotSkiaSurface CreateSurface() {
+	private IGodotRenderSurface CreateSurface() {
 		if (_isDisposed)
 			throw new ObjectDisposedException(nameof(GodotTopLevelImpl));
 
-		return _platformGraphics.GetSharedContext().CreateSurface(_renderSize, RenderScaling);
+		return _platformGraphics.IsSoftware
+			? new GodotSoftwareSurface(_renderSize, RenderScaling)
+			: _platformGraphics.GetSharedContext().CreateSurface(_renderSize, RenderScaling);
 	}
 
-	internal GodotSkiaSurface? TryGetSurface()
+	internal IGodotRenderSurface? TryGetSurface()
 		=> _surface;
 
-	internal GodotSkiaSurface GetOrCreateSurface()
+	internal IGodotRenderSurface GetOrCreateSurface()
 		=> _surface ??= CreateSurface();
 
-	/// <summary>Godot texture that Avalonia renders into (for the project-side host <c>_Draw</c>).</summary>
-	public Texture2Drd GetGdTexture()
+	/// <summary>
+	/// Godot texture that Avalonia renders into (for the project-side host <c>_Draw</c>).
+	/// A <see cref="Texture2Drd"/> when rendering on the GPU, an <see cref="ImageTexture"/> with the CPU fallback.
+	/// </summary>
+	public Texture2D GetGdTexture()
 		=> GetOrCreateSurface().GdTexture;
 
 	/// <summary>How many times the current surface has been drawn (used to detect post-resize redraws).</summary>

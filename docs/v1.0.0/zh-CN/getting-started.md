@@ -12,7 +12,7 @@ NuGet 包名是 **`Ouse.Estragonia`**；代码命名空间仍是 **`JLeb.Estrago
 
 ## 环境
 
-- Godot **4.7.2+**（.NET），渲染器 **Forward+** 或 **Mobile**；Windows / Linux 用 **Vulkan** 驱动，macOS / iOS 用 **Metal**。Windows 上 Godot 默认是 D3D12，须把 `rendering/rendering_device/driver.windows` 设为 `vulkan`（模板和示例已设置）
+- Godot **4.7.2+**（.NET），渲染器 **Forward+** 或 **Mobile**；Windows / Linux 用 **Vulkan** 驱动，macOS / iOS 用 **Metal**。Windows 上 Godot 默认是 D3D12，须把 `rendering/rendering_device/driver.windows` 设为 `vulkan`（模板和示例已设置）。其他驱动会回退到较慢的 CPU 渲染
 - .NET SDK **10**
 - Avalonia **12**
 

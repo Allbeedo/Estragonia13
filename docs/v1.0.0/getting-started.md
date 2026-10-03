@@ -12,7 +12,7 @@ Package id is **`Ouse.Estragonia`**; C# namespaces remain **`JLeb.Estragonia`**.
 
 ## Requirements
 
-- Godot **4.7.2+** (.NET build), renderer **Forward+** or **Mobile**, with the **Vulkan** driver on Windows / Linux and **Metal** on macOS / iOS. Godot defaults to D3D12 on Windows: set `rendering/rendering_device/driver.windows` to `vulkan` (the template and sample already do)
+- Godot **4.7.2+** (.NET build), renderer **Forward+** or **Mobile**, with the **Vulkan** driver on Windows / Linux and **Metal** on macOS / iOS. Godot defaults to D3D12 on Windows: set `rendering/rendering_device/driver.windows` to `vulkan` (the template and sample already do). Other drivers work through a slower CPU fallback
 - .NET SDK **10**
 - Avalonia **12**
 

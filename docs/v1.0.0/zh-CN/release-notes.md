@@ -2,8 +2,9 @@
 
 ## 未发布
 
-- **Apple 平台：** 新增 macOS / iOS 的 Metal 渲染后端（Godot 默认的 `metal` 驱动），改编自 [SkiaGameRendering](https://github.com/vchelaru/SkiaGameRendering)（[#92](https://github.com/vchelaru/SkiaGameRendering/issues/92)，MIT）。Apple 平台上通过 MoltenVK 的 Vulkan 会给出明确错误。
-- 不支持的渲染驱动（`d3d12`、Compatibility）给出明确错误信息。
+- **Apple 平台：** 新增 macOS / iOS 的 Metal 渲染后端（Godot 默认的 `metal` 驱动），改编自 [SkiaGameRendering](https://github.com/vchelaru/SkiaGameRendering)（[#92](https://github.com/vchelaru/SkiaGameRendering/issues/92)，MIT）。Apple 平台上通过 MoltenVK 的 Vulkan 使用 CPU 回退。
+- **CPU 回退：** 其他渲染驱动（`d3d12`、Compatibility 渲染器、MoltenVK 上的 Vulkan）或 GPU 初始化失败时，Avalonia 改为在 CPU 上渲染到 `ImageTexture`，并打印警告，不再报错。见 `GodotVkPlatformGraphics.IsSoftware`。
+- `GodotTopLevelImpl.GetGdTexture()` 现在返回 `Texture2D`（GPU 下为 `Texture2Drd`，CPU 回退时为 `ImageTexture`）。
 - 模板和示例按平台固定渲染驱动（Windows / Linux 为 Vulkan，macOS / iOS 为 Metal），因为 Godot 4.6+ 在 Windows 上默认是 D3D12。
 
 ## 1.0.6

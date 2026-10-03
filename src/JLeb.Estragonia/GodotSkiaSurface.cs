@@ -7,11 +7,14 @@ using SkiaSharp;
 namespace JLeb.Estragonia;
 
 /// <summary>Encapsulates a Skia surface along with the Godot texture it comes from.</summary>
-internal sealed class GodotSkiaSurface : ISkiaSurface, IPlatformRenderSurface {
+internal sealed class GodotSkiaSurface : ISkiaSurface, IGodotRenderSurface {
 
 	public SKSurface SkSurface { get; }
 
 	public Texture2Drd GdTexture { get; }
+
+	Texture2D IGodotRenderSurface.GdTexture
+		=> GdTexture;
 
 	public RenderingDevice RenderingDevice { get; }
 

@@ -32,7 +32,7 @@
 |----|------|
 | .NET SDK | 10.x |
 | Godot | 4.7.2+（.NET / Forward+ 或 Mobile） |
-| 渲染驱动 | Windows / Linux：Vulkan；macOS / iOS：Metal（不支持 D3D12、Compatibility、MoltenVK） |
+| 渲染驱动 | GPU：Windows / Linux 用 Vulkan，macOS / iOS 用 Metal；其他驱动（D3D12、Compatibility 等）自动回退到 CPU 渲染（较慢） |
 | Avalonia | 12.x |
 
 ---
@@ -99,7 +99,7 @@ dotnet add package CommunityToolkit.Mvvm
 ```
 
 1. 增加 Avalonia `Application`（含主题）。
-   在 `project.godot` 设置渲染驱动（Windows 默认是 D3D12，必须改成 Vulkan）：
+   在 `project.godot` 设置渲染驱动（Windows 默认是 D3D12，会回退到较慢的 CPU 渲染，建议改成 Vulkan）：
 
    ```ini
    [rendering]
