@@ -6,6 +6,11 @@ name: Apple test
 
 on:
   workflow_dispatch:
+    inputs:
+      print_screenshots:
+        description: Also print the screenshots (base64, downscaled) into the job log, for tools that can't download artifacts
+        type: boolean
+        default: false
   push:
     branches: [feature/apple-platform]
     paths:
@@ -89,6 +94,16 @@ jobs:
           run moltenvk --rendering-driver vulkan
 
           exit $status
+
+      - name: Print screenshots
+        if: always() && inputs.print_screenshots
+        run: |
+          for f in screenshots/*.png; do
+            sips -Z 1152 "$f" --out small.png > /dev/null
+            echo "BEGIN-SCREENSHOT $(basename "$f")"
+            base64 -b 200 -i small.png
+            echo "END-SCREENSHOT $(basename "$f")"
+          done
 
       - uses: actions/upload-artifact@v4
         if: always()
