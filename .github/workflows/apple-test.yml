@@ -98,11 +98,12 @@ jobs:
       - name: Print screenshots
         if: always() && inputs.print_screenshots
         run: |
-          for f in screenshots/*.png; do
-            sips -Z 1152 "$f" --out small.png > /dev/null
-            echo "BEGIN-SCREENSHOT $(basename "$f")"
-            base64 -b 200 -i small.png
-            echo "END-SCREENSHOT $(basename "$f")"
+          # JPEG keeps the log small; metal last, since log readers often only fetch the tail.
+          for f in $(ls screenshots/*.png | sort -r); do
+            sips -Z 1152 -s format jpeg -s formatOptions 80 "$f" --out small.jpg > /dev/null
+            echo "BEGIN-SCREENSHOT $(basename "$f" .png).jpg"
+            base64 -b 200 -i small.jpg
+            echo "END-SCREENSHOT $(basename "$f" .png).jpg"
           done
 
       - uses: actions/upload-artifact@v4
