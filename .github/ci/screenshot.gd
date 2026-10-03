@@ -3,11 +3,18 @@ extends Node
 # CI-only autoload, injected into samples/HelloWorld by .github/workflows/apple-test.yml:
 # takes screenshots of the running sample, clicks the settings tab, resizes the window, then quits.
 # Screenshots go to $SHOT_DIR/<$SHOT_NAME>-<step>.png.
+# Each step waits for both some time and some rendered frames, so slow (software-rendered) machines still
+# show the result of the previous step.
 
-var _start := 0
+const STEP_MS := 1500
+const STEP_FRAMES := 10
+
+var _step := 0
+var _step_start_ms := 0
+var _step_start_frame := 0
 
 func _ready() -> void:
-	_start = Time.get_ticks_msec()
+	_step_start_ms = Time.get_ticks_msec()
 	print("CI: driver=", RenderingServer.get_current_rendering_driver_name(),
 		" method=", RenderingServer.get_current_rendering_method(),
 		" adapter=", RenderingServer.get_video_adapter_name())
@@ -25,23 +32,22 @@ func _click(pos: Vector2, pressed: bool) -> void:
 	e.global_position = pos
 	Input.parse_input_event(e)
 
-func _once(key: String) -> bool:
-	if has_meta(key):
-		return false
-	set_meta(key, true)
-	return true
-
 func _process(_delta: float) -> void:
-	var t := Time.get_ticks_msec() - _start
-	if t > 3000 and _once("start"):
-		_shot("1-start")
-	if t > 3200 and _once("down"):
-		_click(Vector2(132, 89), true)
-	if t > 3400 and _once("up"):
-		_click(Vector2(132, 89), false)
-	if t > 5000 and _once("settings"):
-		_shot("2-settings-tab")
-		get_window().size = Vector2i(800, 560)
-	if t > 7000 and _once("resized"):
-		_shot("3-resized")
-		get_tree().quit()
+	var frame := Engine.get_process_frames()
+	if Time.get_ticks_msec() - _step_start_ms < STEP_MS or frame - _step_start_frame < STEP_FRAMES:
+		return
+	_step_start_ms = Time.get_ticks_msec()
+	_step_start_frame = frame
+	_step += 1
+	match _step:
+		1:
+			_shot("1-start")
+			_click(Vector2(132, 89), true)
+		2:
+			_click(Vector2(132, 89), false)
+		3:
+			_shot("2-settings-tab")
+			get_window().size = Vector2i(800, 560)
+		4:
+			_shot("3-resized")
+			get_tree().quit()

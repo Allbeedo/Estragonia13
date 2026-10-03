@@ -73,33 +73,50 @@ jobs:
           mkdir -p "$SHOT_DIR"
           status=0
           echo "### ${{ matrix.arch }} ($(uname -m), macOS $(sw_vers -productVersion))" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Run | Godot driver | Estragonia path | Screenshots |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-----|--------------|-----------------|-------------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Run | Godot driver (adapter) | Estragonia path | Screenshots | Exit code |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-----|------------------------|-----------------|-------------|-----------|" >> "$GITHUB_STEP_SUMMARY"
 
           run() {
             local name=$1; shift
+            local required=$1; shift
             echo "::group::$name"
-            SHOT_NAME=$name perl -e 'alarm shift; exec @ARGV' 120 \
-              "$GODOT" --path "$SAMPLE" --resolution 1152x648 "$@" > "$SHOT_DIR/$name.log" 2>&1 || true
+            touch "$RUNNER_TEMP/run-start"
+            SHOT_NAME=$name perl -e 'alarm shift; exec @ARGV' 180 \
+              "$GODOT" --path "$SAMPLE" --resolution 1152x648 "$@" > "$SHOT_DIR/$name.log" 2>&1 \
+              && echo "exit code 0" >> "$SHOT_DIR/$name.log" || echo "exit code $?" >> "$SHOT_DIR/$name.log"
             cat "$SHOT_DIR/$name.log"
+            # Godot crashes leave a macOS crash report; print the newest one from this run.
+            local report
+            report=$(find ~/Library/Logs/DiagnosticReports -name 'Godot*' -newer "$RUNNER_TEMP/run-start" 2>/dev/null | tail -1)
+            if [ -n "$report" ]; then
+              echo "--- crash report: $report"
+              head -c 20000 "$report" | tee "$SHOT_DIR/$name.crash.txt"
+            fi
             echo "::endgroup::"
 
-            local driver adapter path shots
+            local driver adapter path shots exitcode
+            exitcode=$(sed -n 's/^exit code //p' "$SHOT_DIR/$name.log")
             driver=$(sed -n 's/^CI: driver=\([^ ]*\).*/\1/p' "$SHOT_DIR/$name.log")
             adapter=$(sed -n 's/^CI: .* adapter=//p' "$SHOT_DIR/$name.log")
             if grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/$name.log"; then path=CPU; else path=GPU; fi
             grep -q "couldn't initialize GPU" "$SHOT_DIR/$name.log" && path="CPU (GPU init failed)"
             [ -z "$driver" ] && path="didn't start"
             shots=$(ls "$SHOT_DIR" | grep -c "^$name-.*\.png$" || true)
-            echo "| $name | ${driver:-?} (${adapter:-?}) | $path | $shots/3 |" >> "$GITHUB_STEP_SUMMARY"
-            echo "$name: driver=${driver:-?} adapter=${adapter:-?} path=$path screenshots=$shots/3"
+            echo "| $name | ${driver:-?} (${adapter:-?}) | $path | $shots/3 | $exitcode |" >> "$GITHUB_STEP_SUMMARY"
+            echo "$name: driver=${driver:-?} adapter=${adapter:-?} path=$path screenshots=$shots/3 exit=$exitcode"
 
-            if [ "$shots" != 3 ]; then
-              if [ "${{ matrix.require_metal }}" = true ] || [ "$name" != metal ]; then status=1; fi
+            if [ "$required" = required ] && { [ "$shots" != 3 ] || [ "$exitcode" != 0 ]; }; then
+              echo "::error::The $name run failed (screenshots $shots/3, exit code $exitcode)"
+              status=1
             fi
           }
 
-          run metal --rendering-driver metal
+          # Apple silicon only: Godot has no Metal driver on Intel, and the Intel VMs have no GPU for Vulkan.
+          if [ "${{ matrix.require_metal }}" = true ]; then gpu=required; else gpu=optional; fi
+
+          # The project's own settings (driver.macos=metal), as a user would run it.
+          run default required
+          run metal $gpu --rendering-driver metal
           # Metal must use the GPU backend, not the CPU fallback.
           if ! grep -q "CI: driver=metal" "$SHOT_DIR/metal.log" || grep -q "Estragonia is rendering on the CPU" "$SHOT_DIR/metal.log"; then
             if [ "${{ matrix.require_metal }}" = true ]; then
@@ -111,8 +128,8 @@ jobs:
           fi
 
           # These two should use the CPU fallback.
-          run opengl --rendering-method gl_compatibility --rendering-driver opengl3
-          run moltenvk --rendering-driver vulkan
+          run opengl required --rendering-method gl_compatibility --rendering-driver opengl3
+          run moltenvk $gpu --rendering-driver vulkan
 
           exit $status
 
