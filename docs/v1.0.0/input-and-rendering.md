@@ -2,7 +2,16 @@
 
 ## Rendering
 
-Avalonia draws into a Vulkan `VkImage` shared with Godot (`Texture2Drd`). The host `Control` blits that texture in `_Draw`. There is no separate Avalonia “window layer” — z-order follows the Godot scene tree / `z_index`.
+Avalonia draws into a GPU texture shared with Godot (`Texture2Drd`), with no copy. The host `Control` blits that texture in `_Draw`. There is no separate Avalonia “window layer” — z-order follows the Godot scene tree / `z_index`.
+
+The rendering driver is selected from `RenderingServer.GetCurrentRenderingDriverName()`:
+
+| Driver | Platforms | Notes |
+|--------|-----------|-------|
+| `vulkan` | Windows, Linux | Skia draws into the texture's `VkImage`; image layouts are transitioned around each draw. |
+| `metal` | macOS, iOS | Skia shares Godot's `MTLDevice` / `MTLCommandQueue` and draws into the texture's `MTLTexture`. Ordering relies on Metal's automatic hazard tracking; with `GODOT_MTL_FORCE_BARRIERS=1` Estragonia waits on the CPU after each draw instead. |
+
+Other drivers (`d3d12`, the Compatibility renderer, and Vulkan through MoltenVK on Apple platforms, since SkiaSharp's Apple native libraries are built without Vulkan) are not supported.
 
 ## Input order (Godot)
 

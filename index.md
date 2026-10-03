@@ -4,7 +4,7 @@ _layout: landing
 
 # Estragonia
 
-Avalonia UI inside Godot 4 (Vulkan / Skia).
+Avalonia UI inside Godot 4 (Vulkan / Metal / Skia).
 
 > **AI-assisted codebase.** Stability is **not** guaranteed. Maintainers review changes; you still need to test.
 

@@ -1,5 +1,10 @@
 # 更新说明
 
+## 未发布
+
+- **Apple 平台：** 新增 macOS / iOS 的 Metal 渲染后端（Godot 默认的 `metal` 驱动），改编自 [SkiaGameRendering](https://github.com/vchelaru/SkiaGameRendering)（[#92](https://github.com/vchelaru/SkiaGameRendering/issues/92)，MIT）。Apple 平台上通过 MoltenVK 的 Vulkan 会给出明确错误。
+- 不支持的渲染驱动（`d3d12`、Compatibility）给出明确错误信息。
+
 ## 1.0.6
 
 - 模板和示例是 **一个 Godot 工程**（Avalonia 和宿主脚本都在 `UI/` 下）。

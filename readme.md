@@ -1,6 +1,6 @@
 # Estragonia
 
-在 **Godot 4** 中嵌入 **Avalonia** UI 的桥接库（Vulkan / Skia 共享纹理）。
+在 **Godot 4** 中嵌入 **Avalonia** UI 的桥接库（Vulkan / Metal / Skia 共享纹理）。
 
 [![NuGet](https://img.shields.io/nuget/v/Ouse.Estragonia.svg)](https://www.nuget.org/packages/Ouse.Estragonia/)
 [![Templates](https://img.shields.io/nuget/v/Ouse.Estragonia.Templates.svg)](https://www.nuget.org/packages/Ouse.Estragonia.Templates/)
@@ -32,6 +32,7 @@
 |----|------|
 | .NET SDK | 10.x |
 | Godot | 4.7.2+（.NET / Forward+ 或 Mobile） |
+| 渲染驱动 | Windows / Linux：Vulkan；macOS / iOS：Metal（Godot 默认，MoltenVK 不支持） |
 | Avalonia | 12.x |
 
 ---

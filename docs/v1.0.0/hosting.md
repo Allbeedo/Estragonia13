@@ -12,7 +12,7 @@
 
 Godot’s C# editor hot-reload **does not support** Godot node types that live only in an external assembly (NuGet / `ProjectReference`). That is an engine limitation ([godot#111881](https://github.com/godotengine/godot/issues/111881), [godot#98094](https://github.com/godotengine/godot/issues/98094)).
 
-The NuGet package (`Ouse.Estragonia`) provides the platform bridge (`UseGodot`, Vulkan/Skia, `AvaloniaControlEngine`, …). It does **not** ship `AvaloniaControl` / `UiHost` as Godot node scripts — those two `.cs` files must be in your Godot project (template/sample already include them).
+The NuGet package (`Ouse.Estragonia`) provides the platform bridge (`UseGodot`, Vulkan/Metal + Skia, `AvaloniaControlEngine`, …). It does **not** ship `AvaloniaControl` / `UiHost` as Godot node scripts — those two `.cs` files must be in your Godot project (template/sample already include them).
 
 If you use the **template**, those two files are already included. If you add the package by hand, **copy them** from the template or sample into your project (class name = file name, one Godot class per file).
 

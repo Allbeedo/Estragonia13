@@ -12,7 +12,7 @@
 
 Godot C# 编辑器热重载 **不支持** 仅存在于外部程序集（NuGet / `ProjectReference`）里的 Godot 节点类型。这是引擎限制（[godot#111881](https://github.com/godotengine/godot/issues/111881)、[godot#98094](https://github.com/godotengine/godot/issues/98094)）。
 
-NuGet 包（`Ouse.Estragonia`）提供平台桥接（`UseGodot`、Vulkan/Skia、`AvaloniaControlEngine` 等），**不会**把 `AvaloniaControl` / `UiHost` 作为 Godot 节点脚本装进你的工程——这两个 `.cs` 必须在 Godot 工程里（模板/示例已带）。
+NuGet 包（`Ouse.Estragonia`）提供平台桥接（`UseGodot`、Vulkan/Metal + Skia、`AvaloniaControlEngine` 等），**不会**把 `AvaloniaControl` / `UiHost` 作为 Godot 节点脚本装进你的工程——这两个 `.cs` 必须在 Godot 工程里（模板/示例已带）。
 
 用 **模板** 时这两个文件已经带好。手动加包时，请从模板或示例 **原样复制** 到你的工程（类名 = 文件名，一个文件一个 Godot 类）。
 

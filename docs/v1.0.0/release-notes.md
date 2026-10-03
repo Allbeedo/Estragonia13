@@ -1,5 +1,10 @@
 # Release notes
 
+## Unreleased
+
+- **Apple platforms:** new Metal rendering backend for macOS / iOS (Godot's default `metal` driver), adapted from [SkiaGameRendering](https://github.com/vchelaru/SkiaGameRendering) ([#92](https://github.com/vchelaru/SkiaGameRendering/issues/92), MIT). Vulkan through MoltenVK is rejected with a clear error.
+- Clear error messages for unsupported rendering drivers (`d3d12`, Compatibility).
+
 ## 1.0.6
 
 - Template and sample are a **single Godot project** (Avalonia and host scripts under `UI/`).

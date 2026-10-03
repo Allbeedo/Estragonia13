@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Unicode;
 using Avalonia;
-using Avalonia.Platform;
-using Avalonia.Platform.Surfaces;
-using Avalonia.Skia;
 using Godot;
 using SkiaSharp;
 using static JLeb.Estragonia.VkInterop;
@@ -16,27 +11,20 @@ using Environment = System.Environment;
 namespace JLeb.Estragonia;
 
 /// <summary>Bridges the Godot Vulkan renderer with a Skia context used by Avalonia.</summary>
-internal sealed class GodotVkSkiaGpu : ISkiaGpu {
+internal sealed class GodotVkSkiaGpu : GodotSkiaGpu {
 
-	private readonly RenderingDevice _renderingDevice;
 	private readonly GRContext _grContext;
 	private readonly uint _queueFamilyIndex;
 	private readonly VkBarrierHelper _barrierHelper;
 
-	public bool IsLost
-		=> _grContext.IsAbandoned;
+	protected override GRContext GrContext
+		=> _grContext;
 
-	IPlatformGraphicsContext? ISkiaGpu.PlatformGraphicsContext
-		=> null;
-
-	public unsafe GodotVkSkiaGpu() {
-		_renderingDevice = RenderingServer.GetRenderingDevice();
-
-		if (_renderingDevice is null)
-			throw new NotSupportedException("Estragonia is only supported on Vulkan renderers (Forward+ or Mobile)");
+	public unsafe GodotVkSkiaGpu(RenderingDevice renderingDevice)
+		: base(renderingDevice) {
 
 		IntPtr GetIntPtrDriverResource(RenderingDevice.DriverResource resource) {
-			var result = (IntPtr) _renderingDevice.GetDriverResource(resource, default, 0UL);
+			var result = (IntPtr) renderingDevice.GetDriverResource(resource, default, 0UL);
 
 			if (result == IntPtr.Zero)
 				throw new InvalidOperationException($"Godot returned null for driver resource {resource}");
@@ -48,7 +36,7 @@ internal sealed class GodotVkSkiaGpu : ISkiaGpu {
 		var vkPhysicalDevice = new VkPhysicalDevice(GetIntPtrDriverResource(RenderingDevice.DriverResource.PhysicalDevice));
 		var vkDevice = new VkDevice(GetIntPtrDriverResource(RenderingDevice.DriverResource.LogicalDevice));
 		var vkQueue = new VkQueue(GetIntPtrDriverResource(RenderingDevice.DriverResource.CommandQueue));
-		var vkQueueFamilyIndex = (uint) _renderingDevice.GetDriverResource(RenderingDevice.DriverResource.QueueFamily, default, 0UL);
+		var vkQueueFamilyIndex = (uint) renderingDevice.GetDriverResource(RenderingDevice.DriverResource.QueueFamily, default, 0UL);
 
 		if (!TryLoadVulkanLibrary(out var vkLibrary))
 			throw new DllNotFoundException("Couldn't find Vulkan loader library");
@@ -120,48 +108,14 @@ internal sealed class GodotVkSkiaGpu : ISkiaGpu {
 			=> NativeLibrary.TryLoad(libraryPath, out handle);
 	}
 
-	object? IOptionalFeatureProvider.TryGetFeature(Type featureType)
-		=> null;
+	protected override GodotSkiaSurface CreateSurfaceCore(PixelSize size, double renderScaling) {
+		var gdRdTexture = CreateSharedTexture(size);
 
-	IDisposable IPlatformGraphicsContext.EnsureCurrent()
-		=> EmptyDisposable.Instance;
-
-	bool ISkiaGpu.IsReadyToCreateRenderTarget(IEnumerable<IPlatformRenderSurface> surfaces)
-		=> surfaces.OfType<GodotSkiaSurface>().Any(surface => !surface.IsDisposed);
-
-	ISkiaGpuRenderTarget? ISkiaGpu.TryCreateRenderTarget(IEnumerable<IPlatformRenderSurface> surfaces)
-		=> surfaces.OfType<GodotSkiaSurface>().FirstOrDefault(surface => !surface.IsDisposed) is { } surface
-			? new GodotSkiaRenderTarget(surface, _grContext, _barrierHelper)
-			: null;
-
-	IScopedResource<GRContext>? ISkiaGpu.TryGetGrContext()
-		=> ScopedResource<GRContext>.Create(_grContext, static () => { });
-
-	public GodotSkiaSurface CreateSurface(PixelSize size, double renderScaling) {
-		size = new PixelSize(Math.Max(size.Width, 1), Math.Max(size.Height, 1));
-
-		var gdRdTextureFormat = new RDTextureFormat {
-			Format = RenderingDevice.DataFormat.R8G8B8A8Unorm,
-			TextureType = RenderingDevice.TextureType.Type2D,
-			Width = (uint)size.Width,
-			Height = (uint)size.Height,
-			Depth = 1,
-			ArrayLayers = 1,
-			Mipmaps = 1,
-			Samples = RenderingDevice.TextureSamples.Samples1,
-			UsageBits = RenderingDevice.TextureUsageBits.SamplingBit
-				| RenderingDevice.TextureUsageBits.CanCopyFromBit
-				| RenderingDevice.TextureUsageBits.CanCopyToBit
-				| RenderingDevice.TextureUsageBits.ColorAttachmentBit
-		};
-
-		var gdRdTexture = _renderingDevice.TextureCreate(gdRdTextureFormat, new RDTextureView());
-
-		var vkImage = new VkImage(_renderingDevice.GetDriverResource(RenderingDevice.DriverResource.Texture, gdRdTexture, 0UL));
+		var vkImage = new VkImage(RenderingDevice.GetDriverResource(RenderingDevice.DriverResource.Texture, gdRdTexture, 0UL));
 		if (vkImage.Handle == 0UL)
 			throw new InvalidOperationException("Couldn't get Vulkan image from Godot texture");
 
-		var vkFormat = (uint) _renderingDevice.GetDriverResource(RenderingDevice.DriverResource.TextureDataFormat, gdRdTexture, 0UL);
+		var vkFormat = (uint) RenderingDevice.GetDriverResource(RenderingDevice.DriverResource.TextureDataFormat, gdRdTexture, 0UL);
 		if (vkFormat == 0U)
 			throw new InvalidOperationException("Couldn't get Vulkan format from Godot texture");
 
@@ -198,27 +152,13 @@ internal sealed class GodotVkSkiaGpu : ISkiaGpu {
 			TextureRdRid = gdRdTexture
 		};
 
-		var surface = new GodotSkiaSurface(
-			skSurface,
-			gdTexture,
-			vkImage,
-			VkImageLayout.UNDEFINED,
-			_renderingDevice,
-			renderScaling,
-			_barrierHelper
-		);
+		var sync = new VkSurfaceSync(vkImage, VkImageLayout.UNDEFINED, _barrierHelper);
+		sync.TransitionLayoutTo(VkImageLayout.COLOR_ATTACHMENT_OPTIMAL);
 
-		surface.TransitionLayoutTo(VkImageLayout.COLOR_ATTACHMENT_OPTIMAL);
-
-		return surface;
+		return new GodotSkiaSurface(skSurface, gdTexture, RenderingDevice, renderScaling, sync);
 	}
 
-	ISkiaSurface? ISkiaGpu.TryCreateSurface(PixelSize size, ISkiaGpuRenderSession? session)
-		=> session is GodotSkiaGpuRenderSession godotSession
-			? CreateSurface(size, godotSession.Surface.RenderScaling)
-			: null;
-
-	public void Dispose() {
+	public override void Dispose() {
 		_grContext.Dispose();
 		_barrierHelper.Dispose();
 	}

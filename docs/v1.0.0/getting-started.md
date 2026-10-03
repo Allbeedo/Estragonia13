@@ -12,7 +12,7 @@ Package id is **`Ouse.Estragonia`**; C# namespaces remain **`JLeb.Estragonia`**.
 
 ## Requirements
 
-- Godot **4.7.2+** (.NET build), renderer **Forward+** or **Mobile** (Vulkan)
+- Godot **4.7.2+** (.NET build), renderer **Forward+** or **Mobile** (Vulkan; Metal on macOS / iOS)
 - .NET SDK **10**
 - Avalonia **12**
 

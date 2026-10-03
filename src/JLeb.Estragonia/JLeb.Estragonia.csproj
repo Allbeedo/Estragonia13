@@ -10,8 +10,8 @@
 		<PackageId>Ouse.Estragonia</PackageId>
 		<PackageReadmeFile>readme.md</PackageReadmeFile>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Description>Bridge embedding Avalonia UI inside Godot 4 (Vulkan / Skia). Host scripts AvaloniaControl/UiHost must live in your Godot project (see template/sample).</Description>
-		<PackageTags>avalonia;godot;ui;game</PackageTags>
+		<Description>Bridge embedding Avalonia UI inside Godot 4 (Vulkan / Metal / Skia). Host scripts AvaloniaControl/UiHost must live in your Godot project (see template/sample).</Description>
+		<PackageTags>avalonia;godot;ui;game;vulkan;metal;macos;ios</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -29,6 +29,7 @@
 
 	<ItemGroup>
 		<None Include="../../readme.md" Pack="true" PackagePath="/" Visible="false" />
+		<None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" Visible="false" />
 	</ItemGroup>
 
 	<!--

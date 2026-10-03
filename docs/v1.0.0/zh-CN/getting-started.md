@@ -12,7 +12,7 @@ NuGet 包名是 **`Ouse.Estragonia`**；代码命名空间仍是 **`JLeb.Estrago
 
 ## 环境
 
-- Godot **4.7.2+**（.NET），渲染器 **Forward+** 或 **Mobile**（Vulkan）
+- Godot **4.7.2+**（.NET），渲染器 **Forward+** 或 **Mobile**（Vulkan；macOS / iOS 上为 Metal）
 - .NET SDK **10**
 - Avalonia **12**
 
