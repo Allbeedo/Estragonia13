@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<!-- The library and the tests both generate IgnoresAccessChecksToAttribute; the tests' own copy is the one they use. -->
+		<NoWarn>$(NoWarn);CS0436</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="xunit.v3" />
+		<PackageReference Include="xunit.runner.visualstudio" />
+		<PackageReference Include="Avalonia.Headless.XUnit" />
+		<PackageReference Include="GodotSharp" VersionOverride="4.7.2" />
+		<!-- As the library: a stand-in IInputRoot implements Avalonia's internal members. -->
+		<PackageReference Include="IgnoresAccessChecksToGenerator" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<IgnoresAccessChecksTo Include="Avalonia.Base" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../../src/JLeb.Estragonia/JLeb.Estragonia.csproj" />
+	</ItemGroup>
+
+	<!-- Also as the library: compile against Avalonia's runtime assemblies (their interfaces are the ones the library implements). -->
+	<Target
+		Name="EstragoniaTestsReferenceAvaloniaRuntimeAssemblies"
+		AfterTargets="ResolvePackageAssets"
+		BeforeTargets="ResolveLockFileReferences">
+
+		<ItemGroup>
+			<ResolvedCompileFileDefinitions
+				Include="@(ResolvedCompileFileDefinitions->'%(Identity)'->Replace('/ref/', '/lib/')->Replace('\ref\', '\lib\'))"
+				HintPath="$([System.String]::new('%(HintPath)').Replace('/ref/', '/lib/').Replace('\ref\', '\lib\'))"
+				PathInPackage="lib/$([System.String]::new('%(PathInPackage)').Substring(4))"
+				Condition="$([System.String]::new('%(PathInPackage)').StartsWith('ref/$(TargetFramework)/Avalonia'))" />
+
+			<ResolvedCompileFileDefinitions
+				Remove="@(ResolvedCompileFileDefinitions)"
+				Condition="$([System.String]::new('%(PathInPackage)').StartsWith('ref/$(TargetFramework)/Avalonia'))" />
+		</ItemGroup>
+
+	</Target>
+
+</Project>

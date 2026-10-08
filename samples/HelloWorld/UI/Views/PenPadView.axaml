@@ -1,0 +1,20 @@
+<UserControl
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	x:Class="HelloWorld.UI.Views.PenPadView">
+
+	<!-- Estragonia's pen (GodotPen): what reaches Avalonia from an Apple Pencil (with the EstragoniaPencil plugin) or a
+	     desktop pen. Draw here: the line follows pressure; the text says what the pointer is. -->
+	<DockPanel>
+		<StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
+			<TextBlock Text="Pen" FontWeight="SemiBold" FontSize="15" />
+			<TextBlock x:Name="PointerText" FontFamily="Consolas,Cascadia Mono,monospace" Text="Draw on the pad below." />
+			<TextBlock x:Name="GestureText" Classes="caption" Text="Pencil gestures: none yet" />
+		</StackPanel>
+		<Button DockPanel.Dock="Bottom" Content="Clear" HorizontalAlignment="Left" Margin="0,8,0,0" Click="OnClear" />
+		<Border x:Name="Pad" Background="#22FFFFFF" CornerRadius="8" ClipToBounds="True">
+			<Canvas x:Name="Ink" />
+		</Border>
+	</DockPanel>
+
+</UserControl>

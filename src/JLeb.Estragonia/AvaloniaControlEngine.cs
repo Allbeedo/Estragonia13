@@ -118,6 +118,9 @@ public sealed class AvaloniaControlEngine : IDisposable {
 		_owner.FocusExited += OnFocusExited;
 		_owner.MouseExited += OnMouseExited;
 
+		// The Apple Pencil on iPad, when the app ships Estragonia's iOS plugin (GodotPen).
+		NativePencil.Connect();
+
 		if (_owner.HasFocus())
 			OnFocusEntered();
 	}

@@ -4,6 +4,7 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:vm="using:HelloWorld.UI.ViewModels"
+	xmlns:views="using:HelloWorld.UI.Views"
 	mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
 	x:Class="HelloWorld.UI.Views.HelloWorldView"
 	x:DataType="vm:HelloWorldViewModel">
@@ -199,6 +200,11 @@
 								Text="ToggleSwitch / Slider / ComboBox / CalendarDatePicker — 设置页常用控件都在这里。" />
 						</StackPanel>
 					</ScrollViewer>
+				</TabItem>
+
+				<!-- Pen (Estragonia's GodotPen; Apple Pencil with the EstragoniaPencil plugin) -->
+				<TabItem Header="Pen">
+					<views:PenPadView Margin="8" />
 				</TabItem>
 
 				<!-- Godot bridge -->

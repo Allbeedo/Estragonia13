@@ -1,0 +1,9 @@
+; Estragonia's Apple Pencil plugin (iPad only). Copy this file and bin/ into the Godot project (e.g. res://addons/estragonia_pencil/).
+[configuration]
+entry_symbol = "estragonia_pencil_init"
+compatibility_minimum = "4.3"
+reloadable = false
+
+[libraries]
+ios.debug = "res://addons/estragonia_pencil/bin/libestragonia_pencil.ios.template_debug.xcframework"
+ios.release = "res://addons/estragonia_pencil/bin/libestragonia_pencil.ios.template_release.xcframework"

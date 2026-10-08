@@ -23,6 +23,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="JLeb.Estragonia.Tests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<IgnoresAccessChecksTo Include="Avalonia.Base" />
 		<IgnoresAccessChecksTo Include="Avalonia.Skia" />
 	</ItemGroup>

@@ -120,13 +120,31 @@ GetWindow()?.SetImeActive(true);
 1. 用 Godot 打开 `samples/HelloWorld`。
 2. 编译并运行（该示例用 `ProjectReference` 指向源码，便于改库）。
 
+## 笔 / Apple Pencil（Pen input）
+
+笔以 **Avalonia 的笔**（`PointerType.Pen`）到达 Avalonia：压力、倾斜、悬停、橡皮端；不再当作鼠标或手指。
+
+- **识别方式：** 设备号为 `GodotPen.PencilDeviceId` 的 Godot 鼠标事件就是笔。这样 Godot 仍把每个事件路由到其下方的控件（本地坐标），Estragonia 再交给 Avalonia。
+- **iPad：** Godot 的 iOS 端口不区分 Pencil 与手指。`native/ios/EstragoniaPencil`（GDExtension）只截取 Pencil 的触摸，以上述设备号送回 Godot，并带上压力、倾斜、240 Hz 中间采样、悬停（iPadOS 16.1+）以及双击 / 捏压（`GodotPen.Interaction`）。**尚未在 Mac / iPad 上编译或运行**，见其 README。
+- **桌面（Windows 平板等）：** Godot 把笔报告为带压力的鼠标；如需当作笔，设置 `GodotPen.IsDesktopPen`。
+- **关闭：** `GodotPen.Enabled = false`。
+- **示例：** HelloWorld 的 “Pen” 标签页显示指针类型、压力、倾斜；`ESTRAGONIA_PEN_DEMO=1` 时自动发送一笔模拟 Pencil 的输入（在 Linux 虚拟显示上验证过整条路径）。
+
+## 测试
+
+```
+dotnet test tests/JLeb.Estragonia.Tests   # 笔：Godot 无关的 PenTracker，以及经 Avalonia 无头窗口到控件的整条路径
+```
+
 ## 仓库结构
 
 ```
-src/JLeb.Estragonia/   # 桥接库（NuGet: Ouse.Estragonia）
-templates/             # dotnet new 模板（NuGet: Ouse.Estragonia.Templates）
-samples/HelloWorld/    # Godot + Avalonia 示例
-docs/v1.0.0/           # 手写文档（英 / 中）
+src/JLeb.Estragonia/              # 桥接库（NuGet: Ouse.Estragonia）
+tests/JLeb.Estragonia.Tests/      # 测试
+native/ios/EstragoniaPencil/      # iPad 上 Apple Pencil 的 GDExtension（Objective-C++）
+templates/                        # dotnet new 模板（NuGet: Ouse.Estragonia.Templates）
+samples/HelloWorld/               # Godot + Avalonia 示例
+docs/v1.0.0/                      # 手写文档（英 / 中）
 ```
 
 ## 热重载提示

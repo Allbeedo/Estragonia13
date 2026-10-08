@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+# Builds Estragonia's Apple Pencil plugin for iOS with godot-cpp (https://github.com/godotengine/godot-cpp).
+#   git clone -b <the godot-cpp branch matching the app's Godot, e.g. 4.4 or later> https://github.com/godotengine/godot-cpp
+#   scons platform=ios arch=arm64 target=template_debug    (and target=template_release; ios_simulator=yes for the simulator)
+# See README.md for packaging the libraries as .xcframeworks.
+import os
+
+godot_cpp = ARGUMENTS.get("godot_cpp", os.environ.get("GODOT_CPP", "godot-cpp"))
+env = SConscript(os.path.join(godot_cpp, "SConstruct"))
+
+env.Append(CPPPATH=["src/"])
+env.Append(CCFLAGS=["-fobjc-arc"])
+env.Append(LINKFLAGS=["-framework", "UIKit", "-framework", "Foundation"])
+
+sources = Glob("src/*.cpp") + Glob("src/*.mm")
+library = env.StaticLibrary(
+    "bin/libestragonia_pencil.{}.{}{}".format(env["platform"], env["target"], env["LIBSUFFIX"]),
+    source=sources,
+)
+Default(library)

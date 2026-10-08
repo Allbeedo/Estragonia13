@@ -23,6 +23,7 @@ public sealed class GodotTopLevelImpl : ITopLevelImpl {
 	private readonly GodotVkPlatformGraphics _platformGraphics;
 	private readonly IClipboard _clipboard;
 	private readonly TouchDevice _touchDevice = new();
+	private readonly Dictionary<int, PenTracker> _pens = new();
 
 	private GodotSkiaSurface? _surface;
 	private WindowTransparencyLevel _transparencyLevel = WindowTransparencyLevel.Transparent;
@@ -146,6 +147,9 @@ public sealed class GodotTopLevelImpl : ITopLevelImpl {
 		=> Paint?.Invoke(rect);
 
 	public bool OnMouseMotion(InputEventMouseMotion inputEvent, ulong timestamp) {
+		if (GodotPen.IsPen(inputEvent))
+			return OnPen(inputEvent, PenPhase.Move, timestamp);
+
 		_lastMouseDeviceId = inputEvent.Device;
 
 		if (_inputRoot is null || Input is not { } input)
@@ -166,6 +170,9 @@ public sealed class GodotTopLevelImpl : ITopLevelImpl {
 	}
 
 	public bool OnMouseButton(InputEventMouseButton inputEvent, ulong timestamp) {
+		if (inputEvent.ButtonIndex == GdMouseButton.Left && GodotPen.IsPen(inputEvent))
+			return OnPen(inputEvent, inputEvent.Pressed ? PenPhase.Down : PenPhase.Up, timestamp);
+
 		_lastMouseDeviceId = inputEvent.Device;
 
 		if (_inputRoot is null || Input is not { } input)
@@ -340,7 +347,63 @@ public sealed class GodotTopLevelImpl : ITopLevelImpl {
 	public void OnLostFocus()
 		=> LostFocus?.Invoke();
 
+	/// <summary>
+	/// A pen's Godot mouse event as a pen (<see cref="GodotPen"/>): the tip down and up, moves touching or hovering, with
+	/// pressure and tilt from the latest motion. Godot's button events carry neither, so a Down takes the pressure the pen
+	/// last reported (the iPad plugin sends a motion at the touch point first).
+	/// </summary>
+	private bool OnPen(InputEventMouse inputEvent, PenPhase phase, ulong timestamp) {
+		if (_inputRoot is null || Input is not { } input)
+			return false;
+
+		if (!_pens.TryGetValue(inputEvent.Device, out var pen))
+			_pens[inputEvent.Device] = pen = new PenTracker();
+
+		var (pressure, tilt, inverted) = inputEvent is InputEventMouseMotion motion
+			? (motion.Pressure, motion.Tilt, motion.PenInverted)
+			: (0f, Vector2.Zero, false);
+		var sample = new PenSample(
+			phase,
+			inputEvent.Position.ToAvaloniaPoint() / RenderScaling,
+			pressure,
+			tilt.X * 90.0f,
+			tilt.Y * 90.0f,
+			Inverted: inverted,
+			Barrel: (inputEvent.ButtonMask & MouseButtonMask.Right) != 0,
+			Keys: inputEvent.GetRawInputModifiers()
+		);
+
+		var args = pen.Create(GodotDevices.GetPen(inputEvent.Device), timestamp, _inputRoot, sample);
+		if (args is null)
+			return false;
+
+		if (pen.Hovering)
+			GodotPen.Hovering(this);
+
+		input(args);
+
+		return args.Handled;
+	}
+
+	/// <summary>The pen stopped hovering over this top level (it moved away, or hover ended): Avalonia sees it leave.</summary>
+	public bool OnPenLeave(ulong timestamp) {
+		if (_inputRoot is null || Input is not { } input)
+			return false;
+
+		var handled = false;
+		foreach (var (device, pen) in _pens) {
+			if (pen.Create(GodotDevices.GetPen(device), timestamp, _inputRoot, new PenSample(PenPhase.Leave, new Point(-1, -1))) is { } args) {
+				input(args);
+				handled |= args.Handled;
+			}
+		}
+
+		return handled;
+	}
+
 	public bool OnMouseExited(ulong timestamp) {
+		OnPenLeave(timestamp);
+
 		if (_inputRoot is null || Input is not { } input)
 			return false;
 
